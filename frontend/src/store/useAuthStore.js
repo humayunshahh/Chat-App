@@ -102,4 +102,17 @@ export const useAuthStore = create((set, get) => ({
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
   },
+  updateLanguagePreference: async (langCode) => {
+    try {
+      const res = await axiosInstance.put("/auth/preferences", {
+        preferredLanguage: langCode,
+      });
+  
+      set((state) => ({
+        authUser: { ...state.authUser, preferredLanguage: res.data.preferredLanguage },
+      }));
+    } catch (err) {
+      console.error("Failed to update language preference:", err);
+    }
+  }  
 }));

@@ -1,4 +1,5 @@
 const express = require("express");
+const axios = require("axios");
 const router = express.Router();
 const { analyzeSentiment, suggestReplies, completeMessage,generateAutoReply } = require("../lib/ai");
 
@@ -42,6 +43,33 @@ router.post("/auto-reply", async (req, res) => {
       res.status(500).json({ error: "AI auto-reply failed" });
     }
   });
+
+  router.post("/translate", async (req, res) => {
+    const { text, to } = req.body;
   
+    if (!text || !to) {
+      return res.status(400).json({ error: "Text and target language are required" });
+    }
+  
+    try {
+      const response = await axios.post(
+        `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${to}`,
+        [{ Text: text }],
+        {
+          headers: {
+            "Ocp-Apim-Subscription-Key": process.env.AZURE_TRANSLATOR_KEY,
+            "Ocp-Apim-Subscription-Region": process.env.AZURE_TRANSLATOR_REGION,
+            "Content-type": "application/json",
+          },
+        }
+      );
+  
+      const translatedText = response.data[0].translations[0].text;
+      res.json({ translatedText });
+    } catch (err) {
+      console.error("Translation error:", err.message);
+      res.status(500).json({ error: "Translation failed" });
+    }
+  });
 
 module.exports = router;

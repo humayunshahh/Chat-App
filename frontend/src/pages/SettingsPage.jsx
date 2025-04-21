@@ -1,6 +1,21 @@
-import { THEMES } from "../constants";
 import { useThemeStore } from "../store/useThemeStore";
+import { useAuthStore } from "../store/useAuthStore";
+import { useEffect, useState } from "react";
 import { Send } from "lucide-react";
+import axios from "axios";
+import { THEMES } from "../constants";
+
+
+const LANGUAGES = [
+  { code: "ta", label: "Tamil" },
+  { code: "hi", label: "Hindi" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "zh-Hans", label: "Chinese (Simplified)" },
+  { code: "ar", label: "Arabic" },
+  { code: "ja", label: "Japanese" },
+];
 
 const PREVIEW_MESSAGES = [
   { id: 1, content: "Hey! How's it going?", isSent: false },
@@ -9,6 +24,27 @@ const PREVIEW_MESSAGES = [
 
 const SettingsPage = () => {
   const { theme, setTheme } = useThemeStore();
+  const { authUser, checkAuth } = useAuthStore();
+  const [preferredLanguage, setPreferredLanguage] = useState("");
+
+  useEffect(() => {
+    if (authUser?.preferredLanguage) {
+      setPreferredLanguage(authUser.preferredLanguage);
+    }
+  }, [authUser]);
+
+  const handleLanguageChange = async (e) => {
+    const selected = e.target.value;
+    setPreferredLanguage(selected);
+    try {
+      await axios.put("http://localhost:5001/api/auth/preferences", {
+        preferredLanguage: selected,
+      }, { withCredentials: true });
+      checkAuth(); // refresh authUser
+    } catch (err) {
+      console.error("Failed to update preferred language", err);
+    }
+  };
 
   return (
     <div className="h-screen container mx-auto px-4 pt-20 max-w-5xl">
@@ -43,14 +79,29 @@ const SettingsPage = () => {
           ))}
         </div>
 
+        {/* 🌍 Language Preference */}
+        <div className="flex flex-col gap-2">
+          <label className="text-lg font-semibold">Translation Language</label>
+          <select
+            value={preferredLanguage}
+            onChange={handleLanguageChange}
+            className="select select-bordered max-w-xs"
+          >
+            <option value="">None (No Translation)</option>
+            {LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Preview Section */}
         <h3 className="text-lg font-semibold mb-3">Preview</h3>
         <div className="rounded-xl border border-base-300 overflow-hidden bg-base-100 shadow-lg">
           <div className="p-4 bg-base-200">
             <div className="max-w-lg mx-auto">
-              {/* Mock Chat UI */}
               <div className="bg-base-100 rounded-xl shadow-sm overflow-hidden">
-                {/* Chat Header */}
                 <div className="px-4 py-3 border-b border-base-300 bg-base-100">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-content font-medium">
@@ -63,7 +114,6 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                {/* Chat Messages */}
                 <div className="p-4 space-y-4 min-h-[200px] max-h-[200px] overflow-y-auto bg-base-100">
                   {PREVIEW_MESSAGES.map((message) => (
                     <div
@@ -78,10 +128,9 @@ const SettingsPage = () => {
                       >
                         <p className="text-sm">{message.content}</p>
                         <p
-                          className={`
-                            text-[10px] mt-1.5
-                            ${message.isSent ? "text-primary-content/70" : "text-base-content/70"}
-                          `}
+                          className={`text-[10px] mt-1.5 ${
+                            message.isSent ? "text-primary-content/70" : "text-base-content/70"
+                          }`}
                         >
                           12:00 PM
                         </p>
@@ -90,7 +139,6 @@ const SettingsPage = () => {
                   ))}
                 </div>
 
-                {/* Chat Input */}
                 <div className="p-4 border-t border-base-300 bg-base-100">
                   <div className="flex gap-2">
                     <input
@@ -109,8 +157,9 @@ const SettingsPage = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div>  
     </div>
   );
 };
+
 export default SettingsPage;
