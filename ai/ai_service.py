@@ -116,14 +116,33 @@ def auto_reply():
         data = request.json
         message = data.get("message", "")
         context = data.get("context", "")
+        persona = data.get("persona", "Friend")  # Default to "Friend"
+
+        # Define persona tone/styles
+        persona_styles = {
+            "Therapist": (
+                "You are a calm, empathetic therapist. "
+                "Your replies should be emotionally validating, careful, and non-judgmental."
+            ),
+            "Friend": (
+                "You are a casual, supportive friend. "
+                "Your replies should be kind, conversational, and informal."
+            ),
+            "Motivational Coach": (
+                "You are a high-energy motivational coach. "
+                "Your replies should be encouraging, energetic, and focused on boosting confidence."
+            )
+        }
+
+        tone = persona_styles.get(persona, persona_styles["Friend"])
 
         prompt = (
-            f"You are replying as a normal person in a chat conversation.\n"
+            f"{tone}\n\n"
+            f"You are replying to a chat message.\n"
             f"Respond to the message: \"{message}\"\n"
             f"{'Conversation context:\n' + context if context else ''}\n"
-            f"Your reply should be realistic, concise (under 25 words), and practical.\n"
-            f"Don’t repeat the original message. Avoid dramatic or poetic language.\n"
-            f"Reply like how you would respond in a chat app.\n\n"
+            f"Your reply should be concise (under 25 words), natural, and fit the persona style.\n"
+            f"Do not repeat the original message. Keep it realistic and appropriate for a chat.\n\n"
             f"Reply:"
         )
 
@@ -135,6 +154,30 @@ def auto_reply():
         print("AutoReply Error:", e)
         return jsonify({ "reply": "" }), 500
 
+@app.route("/smart-search", methods=["POST"])
+def smart_search():
+    data = request.json
+    query = data.get("query", "").strip()
+    history = data.get("history", [])  # list of messages (strings)
+
+    if not query or not isinstance(history, list):
+        return jsonify({ "results": [] }), 400
+
+    prompt = (
+        f"The user asked: \"{query}\"\n"
+        f"Search through the following chat history and find relevant messages:\n\n"
+        + "\n".join(history)
+        + "\n\nReturn the most relevant messages that match the query."
+    )
+
+    try:
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        response = model.generate_content(prompt)
+        results = response.text.strip().split("\n")
+        return jsonify({ "results": results })
+    except Exception as e:
+        print("Smart Search Error:", e)
+        return jsonify({ "results": [] }), 500
 
 
 if __name__ == "__main__":
