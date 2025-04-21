@@ -4,7 +4,7 @@ import User from "../models/user.model.js";
 
 config();
 
-const seedUsers = [
+/*const seedUsers = [
   // Female Users
   {
     email: "emma.thompson@example.com",
@@ -113,3 +113,4 @@ const seedDatabase = async () => {
 
 // Call the function
 seedDatabase();
+*/

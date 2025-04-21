@@ -1,25 +1,33 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X } from "lucide-react";
+import { Image, Send, X, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
+import { completeMessage } from "../lib/ai";
 
-const MessageInput = () => {
+
+const MessageInput = ({ presetText = "", clearPreset }) => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
   const { sendMessage } = useChatStore();
 
+  // ✅ Handle suggestion being clicked
+  useEffect(() => {
+    if (presetText) {
+      setText(presetText);
+      if (clearPreset) clearPreset(); // clear after setting
+    }
+  }, [presetText]);
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (!file.type.startsWith("image/")) {
+    if (!file?.type?.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
+    reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
   };
 
@@ -38,12 +46,41 @@ const MessageInput = () => {
         image: imagePreview,
       });
 
-      // Clear form
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       console.error("Failed to send message:", error);
+    }
+  };
+
+  const handleAIComplete = async () => {
+    if (!text.trim()) {
+      toast.error("Enter a prompt first");
+      return;
+    }
+
+    try {
+      toast.loading("AI writing message...");
+      const aiText = await completeMessage(text);
+      toast.dismiss();
+
+      if (!aiText || aiText.trim() === "") {
+        toast.error("AI returned empty response");
+        return;
+      }
+
+      await sendMessage({
+        text: aiText.trim(),
+        image: null,
+      });
+
+      setText("");
+      toast.success("AI message sent");
+    } catch (err) {
+      toast.dismiss();
+      toast.error("AI failed to complete message");
+      console.error(err);
     }
   };
 
@@ -59,8 +96,7 @@ const MessageInput = () => {
             />
             <button
               onClick={removeImage}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300
-              flex items-center justify-center"
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center"
               type="button"
             >
               <X className="size-3" />
@@ -73,6 +109,7 @@ const MessageInput = () => {
         <div className="flex-1 flex gap-2">
           <input
             type="text"
+            id="messageInput"
             className="w-full input input-bordered rounded-lg input-sm sm:input-md"
             placeholder="Type a message..."
             value={text}
@@ -85,16 +122,26 @@ const MessageInput = () => {
             ref={fileInputRef}
             onChange={handleImageChange}
           />
-
           <button
             type="button"
-            className={`hidden sm:flex btn btn-circle
-                     ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
+            className={'hidden sm:flex btn btn-circle ${imagePreview ? "text-emerald-500" : "text-zinc-400"}'}
             onClick={() => fileInputRef.current?.click()}
           >
             <Image size={20} />
           </button>
         </div>
+
+        {/* ✨ Let AI Write Button */}
+        <button
+          type="button"
+          className="btn btn-sm btn-circle text-purple-500 hover:bg-purple-100"
+          onClick={handleAIComplete}
+          title="Let AI write your message"
+        >
+          <Sparkles size={20} />
+        </button>
+
+        {/* Send Button */}
         <button
           type="submit"
           className="btn btn-sm btn-circle"
@@ -106,4 +153,5 @@ const MessageInput = () => {
     </div>
   );
 };
+
 export default MessageInput;
