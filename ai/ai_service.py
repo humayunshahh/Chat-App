@@ -3,10 +3,19 @@ import json
 from flask_cors import CORS
 from transformers import pipeline
 import google.generativeai as genai
+from dotenv import load_dotenv
+import os
 
-# ✅ Configure Gemini API
-genai.configure(api_key="AIzaSyDpzpjDcyXb9KhAyEpbYH-5IZlYdsB9uXk")  # Replace with your key
+# ✅ Load environment variables before using them
+from pathlib import Path
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / "backend" / ".env")
+
+# ✅ Retrieve the API key after loading .env
+google_api_key = os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=google_api_key)
 GEMINI_MODEL = "models/gemini-1.5-flash"
+
+print("Google API key loaded:", bool(google_api_key))  # Should be True
 
 app = Flask(__name__)
 CORS(app)
